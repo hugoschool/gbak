@@ -20,13 +20,28 @@ pub const Main = struct {
 };
 
 pub const Header = struct {
-    pub const Subcommands = enum {};
+    pub const Verify = struct {
+        pub const params = clap.parseParamsComptime(
+            \\<str>
+            \\  Path to the cartridge header
+            \\
+            \\-h, --help  Display this help and exit.
+            \\
+        );
+
+        pub const Args = clap.ResultEx(clap.Help, &Verify.params, clap.parsers.default);
+    };
+
+    pub const Subcommands = enum { verify };
 
     pub const parsers = .{
         .command = clap.parsers.enumeration(Subcommands),
     };
 
     pub const params = clap.parseParamsComptime(
+        \\<command>
+        \\  verify: Verify the entire cartridge header
+        \\
         \\-h, --help  Display this help and exit.
         \\
     );
