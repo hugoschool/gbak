@@ -2,6 +2,10 @@ const std = @import("std");
 
 /// Directly taken from https://www.problemkaputt.de/gbatek-gba-cartridge-header.htm
 pub const Header = struct {
+    pub const game_title_size = 12;
+    pub const game_code_size = 4;
+    pub const maker_code_size = 2;
+
     pub const nintendo_logo_size = 156;
 
     // Comments have been added on each line to keep formatting
@@ -96,6 +100,30 @@ pub const Header = struct {
         return true;
     }
 
+    /// Generates a "template" header that can be modified after
+    pub fn new() Header {
+        const entrypoint = 0xea00002e;
+
+        var header = Header{
+            .entrypoint = entrypoint,
+            .nintendo_logo = Header.nintendo_logo_value,
+            .game_title = @splat(0),
+            .game_code = 0,
+            .maker_code = 0,
+            .fixed = Header.fixed_value,
+            .main_unit_code = 0x00,
+            .device_type = 0x00,
+            .reserved_1 = @splat(0),
+            .software_version = 0,
+            .complement_check = 0,
+            .reserved_2 = 0,
+        };
+
+        header.complement_check = header.calculateComplementCheck();
+
+        return header;
+    }
+
     /// 000h    4     ROM Entry Point  (32bit ARM branch opcode, eg. "B rom_start")
     entrypoint: u32 align(1),
 
@@ -103,7 +131,7 @@ pub const Header = struct {
     nintendo_logo: [nintendo_logo_size]u8 align(1),
 
     /// 0A0h    12    Game Title       (uppercase ascii, max 12 characters)
-    game_title: [12]u8 align(1),
+    game_title: [game_title_size]u8 align(1),
 
     /// 0ACh    4     Game Code        (uppercase ascii, 4 characters)
     game_code: u32 align(1),
