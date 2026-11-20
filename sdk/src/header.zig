@@ -10,25 +10,16 @@ fn generateWriteToOutput(io: std.Io, input_file_path: []const u8, output_file_pa
     const input_file = try dir.openFile(io, input_file_path, .{});
     const output_file = try dir.createFile(io, output_file_path, .{});
 
-    var input_file_reader_ = input_file.reader(io, &.{});
-    const input_file_reader = &input_file_reader_.interface;
+    var input_file_reader = input_file.reader(io, &.{});
+    const reader = &input_file_reader.interface;
 
-    var output_file_writer_ = output_file.writer(io, &.{});
-    const output_file_writer = &output_file_writer_.interface;
+    var output_file_writer = output_file.writer(io, &.{});
+    const writer = &output_file_writer.interface;
 
-    _ = try output_file_writer.write(@ptrCast(header));
+    _ = try writer.write(@ptrCast(header));
 
-    while (true) {
-        var buf: [512]u8 = undefined;
-
-        input_file_reader.readSliceAll(&buf) catch |err| {
-            switch (err) {
-                error.EndOfStream => break,
-                else => return err,
-            }
-        };
-        _ = try output_file_writer.write(&buf);
-    }
+    // Stream directly the content of the file into the writer
+    _ = try reader.stream(writer, .unlimited);
 
     var stdout = std.Io.File.stdout().writerStreaming(io, &.{});
     const interface = &stdout.interface;
