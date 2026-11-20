@@ -55,7 +55,8 @@ pub const Header = struct {
 
     pub const params = clap.parseParamsComptime(
         \\<command>
-        \\  generate: Add a Cartridge header to the given file
+        \\  generate: Add a cartridge header to the given file
+        \\
         \\  verify: Verify the entire cartridge header
         \\
         \\-h, --help  Display this help and exit.
