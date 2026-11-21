@@ -1,4 +1,5 @@
 .text
+.section .text.bootstrap
 .global _bootstrap
 
 //---
@@ -46,10 +47,7 @@ color_loop:
     cmp r1, #0
     bne color_loop
 
-// Waiting loop of death
-death_loop:
-    b death_loop
-    nop
+    b main
 
 //---
 // Data area
