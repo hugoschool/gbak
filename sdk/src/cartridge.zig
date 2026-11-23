@@ -31,13 +31,35 @@ pub const Header = struct {
     /// Hard coded value (checksum)
     pub const fixed_value = 0x96;
 
+    /// According to the ARMv7TDMI branch instruction encoding.
+    /// If you read the manual, the fields are actually reversed due to endianness.
+    const BranchInstruction = packed struct(u32) {
+        address: u24,
+        long: bool,
+        opcode: u3,
+        cond: u4,
+    };
+
     /// Displays all the content inside the header
     /// Displays if the header is valid or not
     pub fn display(h: Header, io: std.Io) !void {
         var stdout = std.Io.File.stdout().writerStreaming(io, &.{});
         const interface = &stdout.interface;
 
-        try interface.print("ROM Entrypoint: 0x{x}\n", .{h.entrypoint});
+        {
+            const entrypoint_branch: BranchInstruction = @bitCast(h.entrypoint);
+
+            // We're at the very start of the header
+            const current_pc = 8;
+            // The address MUST fit inside 32 bits, therefore we need to shift it by 2
+            const entrypoint_address: u32 = (entrypoint_branch.address << 2) + current_pc;
+
+            try interface.print("ROM Entrypoint:\n", .{});
+            try interface.print("  raw: 0x{x}\n", .{h.entrypoint});
+            try interface.print("  opcode: {s} 0x{x}\n", .{ if (entrypoint_branch.long) "bl" else "b", entrypoint_address });
+            try interface.print("  valid: {s}\n", .{if (Header.verifyEntrypoint(h.entrypoint)) "valid" else "invalid"});
+        }
+
         try interface.print("Nintendo Logo: {s}\n", .{if (Header.verifyNintendoLogo(h.nintendo_logo)) "valid" else "invalid"});
         try interface.print("Game title: {s}\n", .{h.game_title});
 
@@ -79,6 +101,17 @@ pub const Header = struct {
         return c;
     }
 
+    /// Verify if the entrypoint instruction is valid
+    pub fn verifyEntrypoint(entrypoint: u32) bool {
+        const branch: BranchInstruction = @bitCast(entrypoint);
+
+        if (branch.opcode != 0b101) {
+            return false;
+        }
+
+        return true;
+    }
+
     /// Verify if the nintendo logo is valid
     pub fn verifyNintendoLogo(nintendo_logo: [nintendo_logo_size]u8) bool {
         return std.mem.eql(u8, &nintendo_logo, &nintendo_logo_value);
@@ -86,6 +119,10 @@ pub const Header = struct {
 
     /// Verify that the header contains the right values
     pub fn verify(h: Header) bool {
+        if (!Header.verifyEntrypoint(h.entrypoint)) {
+            return false;
+        }
+
         if (!Header.verifyNintendoLogo(h.nintendo_logo)) {
             return false;
         }
